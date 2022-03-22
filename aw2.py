@@ -27,14 +27,14 @@ from PyQt5.QtCore import pyqtSignal , Qt, pyqtSlot
 from PyQt5.QtCore import QObject, QThread, pyqtSignal, QRunnable, QThreadPool
 
 
-class QCStateMachine(IntEnum):
-    QC_STATE_STANDBY = 0
-    QC_STATE_TEST_POWER_RAIL = auto()
-    QC_STATE_TEST_SENSOR = auto()
-    QC_STATE_TEST_TAMPER = auto()
-    QC_STATE_MODEM_ON = auto()
-    QC_STATE_TEST_SIM_CARD = auto()
-    QC_STATE_TEST_SIGNAL = auto()
+# class QCStateMachine(IntEnum):
+#     QC_STATE_STANDBY = 0
+#     QC_STATE_TEST_POWER_RAIL = auto()
+#     QC_STATE_TEST_SENSOR = auto()
+#     QC_STATE_TEST_TAMPER = auto()
+#     QC_STATE_MODEM_ON = auto()
+#     QC_STATE_TEST_SIM_CARD = auto()
+#     QC_STATE_TEST_SIGNAL = auto()
 
 class TaskRow(IntEnum):
     TEST1 = 0
@@ -48,6 +48,7 @@ class MainWindow(QMainWindow,QWidget):
         self.setWindowTitle("FSM")
         self.setFixedSize(500,200)
         self._controller = Controller(self)
+        # self._context = Context(self,parent=None)
         self.parent = parent
         
         self.container = QVBoxLayout()
@@ -95,27 +96,22 @@ class MainWindow(QMainWindow,QWidget):
 
     def control_btn(self):
         self._controller.start_worker()
+        QApplication.processEvents()
     
-    # def power_btn(self):
-    #     self._controller.control_power_btn()               
-    
-    # def sensor_btn(self):
-    #     self._controller.control_sensor_btn()        
-        
 
 
 class Worker(QRunnable):
     def __init__(self, parent, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._parent = parent
-        
+
     @pyqtSlot()
     def run(self):
         # test = CallMethodFromController()
-         
+        #  pass
         
         # self._parent.update("PASS")
-        test = Context(QC_STATE_STANDBY())
+        test = Context(QC_STATE_STANDBY(parent=None))
         test.pass_function()
         
         
@@ -160,6 +156,7 @@ class Context:
     _state = None
     def __init__(self, state: State) -> None:
         self.setState(state)
+        # self._parent = parent
 
     def setState(self, state: State):
 
@@ -175,8 +172,15 @@ class Context:
     def fail_function(self):
         self._state.fail_function()
         
-    # def update(self):
+    # def update_func(self):
     #     self._state.update()
+    
+    # def update_func(self, update_str):
+    #     self._parent.label_instruction.setText(update_str)
+    #     if update_str =="PASS":
+    #         self._parent.pass_button.setStyleSheet("background-color: {}".format("#86b721"))
+    #     elif update_str == "FAIL":
+    #         self._parent.fail_button.setStyleSheet("background-color: {}".format("#fe1818"))
 
 
 class State(ABC):
@@ -189,29 +193,28 @@ class State(ABC):
         self._context = context
 
     @abstractmethod
-    def pass_function(self) -> None:
+    def pass_function(self, func) -> None:
         pass
     
-    # @abstractmethod
+    @abstractmethod
     def fail_function(self) -> None:
         pass
     
     # @abstractmethod
-    # def update(self):
+    # def update_func(self):
     #     pass
 
-class CallMethodFromController(Controller):
-    def __init__(self):
-        pass
-    
-        self.update("PASS")
+# class CallMethodFromController(Controller):
+#     def __init__(self):
+#         self.update("PASS")
            
-class QC_STATE_STANDBY(State):
+class QC_STATE_STANDBY(State,Controller):
 
     def pass_function(self) -> None:
         print("STATE : QC_STATE_STANDBY.")
         print("QC_STATE_STANDBY now changes the state of the context.")
         time.sleep(2)
+        self.update("PASS")
         # self.context.setState(QC_STATE_TEST_POWER_RAIL())
         power_test = Context(QC_STATE_TEST_POWER_RAIL())
         power_test.pass_function()
@@ -228,11 +231,9 @@ class QC_STATE_TEST_POWER_RAIL(State):
         ser.write(b"{P?}")
         data = ser.readline()
         print(data)
-        
         input1 = data[1:5]
         input2 = input1[0:2]
         input3 = input1[2:]
-        
         integer1 = int.from_bytes(input2,"little")
         integer2 = int.from_bytes(input3,"little")
         print(integer1)
@@ -243,31 +244,27 @@ class QC_STATE_TEST_POWER_RAIL(State):
                 print("PASS")
                 break
             else:
+                print("FAIL")
                 return self.fail_function()
+                
 
         print("QC_STATE_TEST_POWER_RAIL wants to change the state of the context.")
         time.sleep(3)
         self.context.setState(QC_STATE_SENSOR())
         sensor_test = Context(QC_STATE_SENSOR())
-        sensor_test.pass_function()
-        
-        
+        sensor_test.pass_function()      
         
     def fail_function(self) -> None:
         print("if fail back to standby mode")
         self.context.setState(QC_STATE_STANDBY())
         print("STANDBY MODE")
-        # else:
-            # print("FAIL BACK TO STATE STANDBY")
-            # self.context.setState(QC_STATE_STANDBY)
+
         
 
 class QC_STATE_SENSOR(State):
     def pass_function(self) -> None:
         print("The context is in the state of QC_STATE_TEST_SENSOR.")
         print("QC_STATE_TEST_SENSOR wants to change the state of the context.")
-        # time.sleep(5)
-        # self.context.setState(QC_STATE_STANDBY())
 
 
         
